@@ -1,0 +1,6 @@
+version: '3'
+services:
+  blinkt:
+    build:
+      context: api
+    image: phriscage/iot_sys-blinkt

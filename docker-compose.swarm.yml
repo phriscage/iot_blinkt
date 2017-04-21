@@ -1,0 +1,12 @@
+version: '3'
+services:
+  blinkt:
+    image: phriscage/iot_sys-blinkt
+    environment:
+      - "constraint:node.role!=manager"
+    #cap-add:
+      #- SYS_RAWIO
+    #devices:
+      #- /dev/mem
+    volumes:
+      - /sys:/sys
