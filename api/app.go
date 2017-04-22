@@ -1,3 +1,5 @@
+// Package main provides sample webserver that interfaces with the GPIO
+// of Raspberry PIs via the sys
 package main
 
 import (
@@ -33,7 +35,7 @@ type Color struct {
 	r, g, b int
 }
 
-// Custom Response Handlers
+// Custom Response Error Handlers with errors array
 func ResponseErrorHandler(w http.ResponseWriter, r *http.Request, code int, errors []string) {
 	if len(errors) != 0 {
 		log.Print(errors)
@@ -74,6 +76,8 @@ func NotFoundHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 // Main Handlers
+
+// Hello Handler checks a parameter and returns the response
 func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	vars := mux.Vars(r)
 	name := vars["name"]
@@ -90,6 +94,9 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 	ResponseHandler(w, r, http.StatusOK, data)
 }
 
+// BlinktsHandler takes color and delay params and maps them to appropriate
+// rgb color schemes for blinkt. Then turns on a random LED interface for the
+// specified delay
 func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 	//vars := mux.Vars(r)
 	//color := vars["color"]
@@ -123,7 +130,7 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 	data["color"] = color
 	data["delay"] = delay
 
-	brightness := 25
+	brightness := 0.5
 	blinkt := NewBlinkt(brightness)
 	//blinkt.SetClearOnExit(true)
 	blinkt.Setup()
@@ -144,7 +151,7 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 	ResponseHandler(w, r, http.StatusOK, data)
 }
 
-// Main
+// Main router logic
 func main() {
 	addr := flag.String("addr", ":8080", "http listen address")
 	flag.Parse()
