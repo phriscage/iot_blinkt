@@ -2,7 +2,6 @@
 
 An IoT Docker Swarm environment with Raspberry Pi Zero IoT devices and [Blinkt!](https://shop.pimoroni.com/products/blinkt)
 
-
 ## Prerequisites
 
 * Docker environment running
@@ -19,53 +18,59 @@ There are three main components to setup the environment.
 *	Consume and scale the service
 
 
-#### Configure Docker Swarm for Rasbian
-The Docker Swarm first requires swarm initialization with a master node. For this tutorial, we will use the local Docker machine on OSX for the master node. Multi-node swarm setup is currently not-available for native Docker for MAC/Windows, https://docs.docker.com/engine/swarm/swarm-tutorial/, so we will use a [DIND](https://hub.docker.com/_/docker/) instance as the master node. Subsequent IoT worker nodes are next created and joined to the cluster. IoT middle nodes could also be a master and will be added at a later date.
+#### Configure Docker Swarm for Rasbian IoT nodes
+The Docker Swarm first requires swarm initialization with a master node. For this tutorial, we will use the local Docker machine on OSX for the master node. Multi-node swarm setup is currently not-available for native Docker for MAC/Windows, https://docs.docker.com/engine/swarm/swarm-tutorial/, so we will use a [DIND](https://hub.docker.com/_/docker/) instance as the master node. For DIND, separate Docker-dind containers are created to simulate a separate Docker machine. So you can essentially run the Docker commands in a separate Docker environment inside your parent Docker environment. Subsequent Raspberry PI worker nodes (Raspberry Pi 3/Zero) are next bootstrapped and joined to the cluster. A Raspberry PI could play the role of master instead of OSX.
 
-Create the DIND container:
+Create the DIND master node container:
 
-We need to expose the Swarm ports and change the advertise address so worker nodes can communicate with the DIND swarm master. TCP 2375 for docker API communication, TCP 2377 for Docker swarm. Any additional ports for containers/applications will need to be exposed to the DIND container when it is created. Do not mount the '/var/lib/docker' volume locally at this time.
+We need to expose the Swarm ports and change the advertise address so worker nodes can communicate with the DIND swarm master. TCP 2375 for docker API communication, TCP 2377 for Docker swarm. Any additional ports for containers/applications will need to be exposed to the DIND container when it is created. Do not mount the '/var/lib/docker' volume locally at this time. The current DIND image is *docker:17.04-dind*:
 
-	docker run -d --privileged --name manager --hostname=manager -p 2375:2375 -p 2377:2377 -p 80:80 -p 443:443 -p 8000:8000 -p 8080:8080 docker:1.13-dind;
-
-You van view the DIND containers that are running on the parent Docker machine
-
-	docker ps -a
-
-Determine the correct IP address to advertise:
-
-Since Docker for MAC/Windows runs natively, typicall you connect via localhost. We need to utilize a reachable IP address from the worker nodes instead of 127.0.0.1. My IoT devices are on an OTG bridge via USB so en8 and bridge100 when sharing access to the internet
-
-	ipconfig getifaddr en8
-	ifconfig bridge100 | grep "inet " | awk '{print $2}'
+	docker run -d --privileged --name manager --hostname=manager -p 2375:2375 -p 2377:2377 -p 8000:8000 -p 8080:8080 docker:17.04-dind;
 
 Initialize the Docker Swarm environment
 
-	docker --host localhost:2375 swarm init --advertise-addr `ifconfig bridge100 | grep "inet " | awk '{print $2}'`
+Since Docker for MAC/Windows runs natively, typically you connect via localhost. We need to utilize a reachable IP address from the worker nodes instead of 127.0.0.1. My IoT devices are on an OTG bridge via USB so en8 and bridge100 when sharing access to the internet. `ifconfig bridge100 | grep "inet " | awk '{print $2}'`
 
-Capture the Swarm join command with token
+	docker -H localhost:2375 swarm init --advertise-addr `ifconfig bridge100 | grep "inet " | awk '{print $2}'`
 
-	docker --host localhost:2375 swarm join-token -q worker
+Create a Swarm token environment variable
 
-On each IoT worker shell session, exectute the swarm join command above (Change the token and swarm master ips).
+    SWARM_TOKEN=$(docker -H localhost:2375 swarm join-token -q worker)
 
-	ssh pi@thing1.local; docker swarm join --token SWMTKN-1-4bj6bn7bral406aqofau8ikry0yna4wt0e5c542f0etbcgvx9a-7z47bebkn9cl7lpbrchoemv2d 192.168.2.1:2377
+Create a Swarm master IP address environment variable
+
+    SWARM_MASTER=$(docker -H localhost:2375 info | grep -w 'Node Address' | awk '{print $3}')
+
+Loop through the IoT worker hostnames via the IOT_WORKERS environment variable and execute the swarm join command with SWARM_TOKEN and SWARM_MASTER variables defined above.
+
+	IOT_WORKERS="thing2.local thing3.local";
+	IOT_USERNAME="pi";
+	for host in $IOT_WORKERS; do
+		ssh $IOT_USERNAME@$host "docker swarm leave; docker swarm join --token $SWARM_TOKEN $SWARM_MASTER:2377"
+	done
 
 Verify the nodes are now part of the Swarm:
 
-	docker --host localhost:2375 node ls
-
-
-#### Launch the Blinkt service
+	docker -H localhost:2375 node ls
 
 
 #### Configure Swarm visualizer
 Swarm visualizer is nice Express JS app to view the Swarm environment. Start the Swarm visualization service in a separate terminal point your browser to http://localhost:8000. You will need to download the image to the DIND environment or mount a volume instead.
 
-	docker --host localhost:2375 service create --with-registry-auth  --name visualizer --constraint 'node.role==manager'  --mount 'type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock,readonly=0'  --publish '8080:8080' manomarks/visualizer
+	docker -H localhost:2375 service create --with-registry-auth  --name visualizer --constraint 'node.role==manager'  --mount 'type=bind,src=/var/run/docker.sock,dst=/var/run/docker.sock,readonly=0'  --publish '8080:8080' manomarks/visualizer
+
+
+#### Launch the IoT application with Blinkt service
+Start the Blinkt service with Docker stack deploy. Point to the docker-compose.yml and add a service name prefix
+
+	docker -H localhost:2375 stack deploy -c docker-compose.yml iot
 
 Check the service status
 
-	docker --host localhost:2375 service ls
+	docker -H localhost:2375 service ls
+
+Scale the service
+
+	docker -H localhost:2375 service scale iot_blinkt=2
 
 Point to http://localhost:8080 to view the nodes and services

@@ -2,8 +2,6 @@ version: '3'
 services:
   blinkt:
     image: phriscage/iot_sys-blinkt
-    environment:
-      - "constraint:node.role!=manager"
     #cap-add:
       #- SYS_RAWIO
     #devices:
@@ -11,4 +9,12 @@ services:
     volumes:
       - /sys:/sys
     ports:
-      - 8080:8080
+      - 8000:8080
+    networks:
+      - front
+    deploy:
+      placement:
+        constraints:
+          - node.role != manager
+networks:
+  front:
