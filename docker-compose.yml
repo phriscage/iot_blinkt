@@ -9,12 +9,12 @@ services:
     volumes:
       - /sys:/sys
     ports:
-      - 8000:8080
-    networks:
-      - front
+      - 8080:8080
+    #networks:
+      #- front
     deploy:
       placement:
         constraints:
           - node.role != manager
-networks:
-  front:
+#networks:
+  #front:
