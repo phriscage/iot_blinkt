@@ -13,6 +13,7 @@ services:
     #networks:
       #- front
     deploy:
+      mode: global
       placement:
         constraints:
           - node.role != manager
