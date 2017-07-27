@@ -98,8 +98,18 @@ func HelloHandler(w http.ResponseWriter, r *http.Request) {
 // rgb color schemes for blinkt. Then turns on a random LED interface for the
 // specified delay
 func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
-	//vars := mux.Vars(r)
-	//color := vars["color"]
+	// Default actions for the resource
+	actions := map[string]bool{
+		"random": true,
+		"all":    true,
+	}
+	vars := mux.Vars(r)
+	action := vars["action"]
+
+	if !actions[action] {
+		ResponseHandler(w, r, http.StatusNotFound, nil)
+		return
+	}
 
 	color := r.URL.Query().Get("color")
 	// Default to blue for now
@@ -125,8 +135,6 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	data := make(map[string]interface{})
-	random := rand.Intn(8)
-	data["random"] = random
 	data["color"] = color
 	data["delay"] = delay
 
@@ -134,15 +142,25 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 	blinkt := NewBlinkt(brightness)
 	//blinkt.SetClearOnExit(true)
 	blinkt.Setup()
-	log.Printf("Turning LED [%d]: '%s'", random, color)
 	blinkt.Clear()
-	blinkt.SetPixel(random, rgb.r, rgb.g, rgb.b)
+	if action == "all" {
+		log.Printf("Turning on all LEDs: '%s'", color)
+		blinkt.SetAll(rgb.r, rgb.g, rgb.b)
+		data["position"] = "all"
+	} else {
+		random := rand.Intn(8)
+		log.Printf("Turning LED [%d]: '%s'", random, color)
+		blinkt.SetPixel(random, rgb.r, rgb.g, rgb.b)
+		data["position"] = random
+	}
 	// Need to show twice for now...
 	blinkt.Show()
 	blinkt.Show()
 	//log.Printf("Running...")
 	Delay(delay)
-	log.Printf("Turning LED [%d]: 'off'", random)
+
+	log.Printf("Turning off LEDs: 'off'")
+
 	// Need to clear & show twice
 	blinkt.Clear()
 	blinkt.Show()
@@ -160,8 +178,8 @@ func main() {
 	router.HandleFunc("/hello", MethodNotAllowedHandler)
 	router.HandleFunc("/hello/{name}", HelloHandler).Methods("GET")
 	router.HandleFunc("/hello/{name}", MethodNotAllowedHandler)
-	router.HandleFunc("/blinkts/random", BlinktsHandler).Methods("POST")
-	router.HandleFunc("/blinkts/random", MethodNotAllowedHandler)
+	router.HandleFunc("/blinkts/{action}", BlinktsHandler).Methods("POST")
+	router.HandleFunc("/blinkts/{action}", MethodNotAllowedHandler)
 	//router.Handle("/blinkts/random", handlers.MethodHandler{
 	//"POST": http.HandlerFunc(BlinktsHandler),
 	//})
