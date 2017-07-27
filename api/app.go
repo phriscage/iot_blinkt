@@ -102,13 +102,28 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 	actions := map[string]bool{
 		"random": true,
 		"all":    true,
+		"pixel":  true,
 	}
+	// Default length of pixels. Need Blinkt class struct in capital
+	pixelLength := 8
+	var pixelId int
+
 	vars := mux.Vars(r)
 	action := vars["action"]
 
 	if !actions[action] {
 		ResponseHandler(w, r, http.StatusNotFound, nil)
 		return
+	}
+
+	if action == "pixel" {
+		id, err := strconv.Atoi(vars["id"])
+		if err != nil || id >= pixelLength {
+			log.Printf("'%s' is not a valid pixel", vars["id"])
+			ResponseHandler(w, r, http.StatusNotFound, nil)
+			return
+		}
+		pixelId = id
 	}
 
 	color := r.URL.Query().Get("color")
@@ -147,6 +162,10 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 		log.Printf("Turning on all LEDs: '%s'", color)
 		blinkt.SetAll(rgb.r, rgb.g, rgb.b)
 		data["position"] = "all"
+	} else if action == "pixel" {
+		log.Printf("Turning LED [%d]: '%s'", pixelId, color)
+		blinkt.SetPixel(pixelId, rgb.r, rgb.g, rgb.b)
+		data["position"] = pixelId
 	} else {
 		random := rand.Intn(8)
 		log.Printf("Turning LED [%d]: '%s'", random, color)
@@ -180,6 +199,8 @@ func main() {
 	router.HandleFunc("/hello/{name}", MethodNotAllowedHandler)
 	router.HandleFunc("/blinkts/{action}", BlinktsHandler).Methods("POST")
 	router.HandleFunc("/blinkts/{action}", MethodNotAllowedHandler)
+	router.HandleFunc("/blinkts/{action}/{id}", BlinktsHandler).Methods("POST")
+	router.HandleFunc("/blinkts/{action}/{id}", MethodNotAllowedHandler)
 	//router.Handle("/blinkts/random", handlers.MethodHandler{
 	//"POST": http.HandlerFunc(BlinktsHandler),
 	//})
