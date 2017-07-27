@@ -35,6 +35,19 @@ type Color struct {
 	r, g, b int
 }
 
+var Colors = map[string]*Color{
+	"black":  {0, 0, 0},
+	"brown":  {139, 69, 19},
+	"red":    {255, 0, 0},
+	"orange": {255, 69, 0},
+	"yellow": {255, 255, 0},
+	"green":  {0, 255, 0},
+	"blue":   {0, 0, 255},
+	"violet": {128, 0, 128},
+	"grey":   {255, 255, 100},
+	"white":  {255, 255, 255},
+}
+
 // Custom Response Error Handlers with errors array
 func ResponseErrorHandler(w http.ResponseWriter, r *http.Request, code int, errors []string) {
 	if len(errors) != 0 {
@@ -140,13 +153,9 @@ func BlinktsHandler(w http.ResponseWriter, r *http.Request) {
 		delay = 1000
 	}
 
-	rgb := &Color{}
-	if color == "blue" {
-		rgb = &Color{0, 0, 255}
-	} else if color == "red" {
-		rgb = &Color{255, 0, 0}
-	} else if color == "green" {
-		rgb = &Color{0, 255, 0}
+	rgb := Colors[color]
+	if rgb == nil {
+		rgb = Colors["blue"]
 	}
 
 	data := make(map[string]interface{})

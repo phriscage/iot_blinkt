@@ -1,7 +1,7 @@
 version: '3'
 services:
   blinkt:
-    image: phriscage/iot_sys-blinkt:0.2.0
+    image: phriscage/iot_sys-blinkt:0.3.0
     #cap-add:
       #- SYS_RAWIO
     #devices:
