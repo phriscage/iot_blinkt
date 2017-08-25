@@ -2,6 +2,11 @@
 
 An IoT Docker Swarm environment with Raspberry Pi Zero IoT devices and [Blinkt!](https://shop.pimoroni.com/products/blinkt)
 
+<p align="center">
+  <img src="images/pi_zero-blinkt.png" height="480" width="640">
+  <img src="images/pi_zero-blinkt.gif" height="480" width="640">
+</p>
+
 ## <a name="prerequisites"></a>Prerequisites:
 
 *	[Rasperry Pi](https://www.raspberrypi.org)
